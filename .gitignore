@@ -1,0 +1,4 @@
+Bellabeat Fitbit Data/
+*.csv
+.Rhistory
+.RData

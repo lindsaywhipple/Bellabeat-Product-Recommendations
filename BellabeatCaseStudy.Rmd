@@ -1,0 +1,411 @@
+**Introduction**
+--
+
+As part of the Google Data Analytics Professional Certificate course on Coursera, it is recommended that we complete a capstone demonstrating all the skills we learned. I chose to complete the second case study: How Can a Wellness Technology Company Play It Smart? due to my interest in women’s health and fitness. This documentation will be showcasing my understanding of the data analysis process including; **Ask**, **Prepare**, **Process**, **Analyze**, **Share**, and **Act**.
+
+
+
+**The Scenario**
+--
+
+Bellabeat is a high-tech manufacturer of health-focused products for women. I will be acting as a junior data analyst on the marketing analytics team, analyzing data from one of our smart fitness devices to gain insight into how consumers are utilizing it. Some key products that I will be looking at include:
+
+
+-- **Bellabeat App**: an app that connects to the line of smart wellness products which provides users with health data related to activity, sleep, stress, menstrual cycle, and mindfulness habits.
+
+
+
+-- **Leaf**: a wellness tracker that can be worn and connects to the Bellabeat app (similar to a FitBit)
+
+
+
+-- **Time**: a wellness watch that allows users to track activity, sleep, and stress and connects to the Bellabeat app
+
+
+
+-- **Spring**: a water bottle that tracks daily water intake and connects to the app
+
+
+
+-- **Bellabeat Membership**: a subscription-based membership program that gives users 24/7 access to personalized guidance on health and wellness habits
+
+
+
+
+
+**ASK**
+--
+
+
+
+
+I want to analyze smart device usage data to gain insight into how consumers use non-Bellabeat smart devices. I will then select one of the Bellabeat products to apply these insights. Some questions I will seek to answer are:
+
+
+
+1. What are some trends in smart device usage?
+
+
+2. How could these trends apply to Bellabeat customers?
+
+
+3. How could these trends help influence Bellabeat marketing strategy?
+
+
+
+The business task at hand is to gain insights from non-Bellabeat smart devices to formulate a marketing strategy for Bellabeat. I also want to consider key stakeholders which include Bellabeat co founders - Urška Sršen and Sando Mur.
+
+
+
+
+
+
+**PREPARE**
+--
+
+
+
+For this project I was given a specific data set related to FitBit tracker Data. See the data [here](https://www.kaggle.com/datasets/arashnic/fitbit). The data is organized in rows and columns in .csv format and is in long format since each row is a time point per subject.
+
+
+
+Installing Packages:
+
+
+```{r}
+r = getOption("repos")
+r["CRAN"] = "http://cran.us.r-project.org"
+options(repos = r)
+install.packages('tidyverse')
+install.packages('janitor')
+install.packages('lubridate')
+install.packages('skimr')
+install.packages('POSIXct')
+```
+
+```{r}
+library(tidyverse)
+library(janitor)
+library(lubridate)
+library(skimr)
+library(ggplot2)
+```
+
+Uploading/Storing Data: 
+
+```{r}
+daily_activity <- read.csv("Bellabeat Fitbit Data/dailyActivity_merged.csv")
+daily_calories <- read.csv("Bellabeat Fitbit Data/dailyCalories_merged.csv")
+daily_steps <- read.csv("Bellabeat Fitbit Data/dailySteps_merged.csv")
+daily_sleep <- read.csv("Bellabeat Fitbit Data/sleepDay_merged.csv")
+```
+
+To identify how the data is organized I am using the commands colnames() and head() to see what the names of the columns are in each of the data sets, along with a short preview of what the data sets look like.
+
+
+```{r}
+colnames(daily_sleep)
+head(daily_sleep)
+colnames(daily_steps)
+head(daily_steps)
+colnames(daily_calories)
+head(daily_calories)
+colnames(daily_activity)
+head(daily_activity)
+```
+
+
+
+**PROCESS**
+--
+
+
+For this project I will be utilizing R Studio along with packages such as ‘tidyverse’ and ‘lubridate’. Right off the bat, I want to check the data for any problems. I started by searching for null values using is.null() and did not find any.
+
+```{r}
+is.null(daily_activity)
+is.null(daily_calories)
+is.null(daily_steps)
+is.null(daily_sleep)
+```
+
+Then, I checked for data errors using str().
+
+```{r}
+str(daily_activity)
+str(daily_calories)
+str(daily_steps)
+str(daily_sleep)
+```
+
+The biggest thing I see here is that there are several columns for dates that are in character format rather than date format, so I need to fix this. 
+
+```{r}
+daily_sleep$SleepDay <- as.Date(daily_sleep$SleepDay, '%m/%d/%y')
+daily_steps$ActivityDay <-as.Date(daily_steps$ActivityDay, '%m/%d/%y')
+daily_calories$ActivityDay <- as.Date(daily_calories$ActivityDay, '%m/%d/%y')
+daily_activity$ActivityDate <- as.Date(daily_activity$ActivityDate, '%m/%d/%y')
+```
+
+
+In the sleep data, I thought it might be interesting to see some data regarding how much time it takes people to fall asleep. I set up a new column in this dataset to display it.
+	
+	
+```{r}
+time_taken_to_sleep <- daily_sleep$TotalTimeInBed - daily_sleep$TotalMinutesAsleep
+daily_sleep$time_taken_to_sleep = (daily_sleep$TotalTimeInBed - daily_sleep$TotalMinutesAsleep)
+head(time_taken_to_sleep)
+```
+
+Next thing I noticed is that there appear to be days where people do not wear their Fitbit tracker, resulting in zero values for total distance and total steps. I do not want to include these in my analyses so I am going to get rid of them before producing some graphs.
+
+```{r}
+cleaned_daily_activity <- daily_activity[!(daily_activity$Calories<=0),]
+cleaned_daily_activity <- cleaned_daily_activity[!(cleaned_daily_activity$TotalDistance<=0.00),]
+head(cleaned_daily_activity)
+```
+
+
+The last change that I want to make is adding a column in the activity, calories, and sleep datasets for day of the week.
+
+Activity:
+
+```{r}
+daily_activity$ActivityDate <- as.Date(daily_activity$ActivityDate, "%Y-%m-%d")
+daily_activity$DayOfWeek <- weekdays(daily_activity$ActivityDate)
+head(daily_activity)
+```
+
+
+```{r}
+cleaned_daily_activity$ActivityDate <- as.Date(cleaned_daily_activity$ActivityDate, "%Y-%m-%d")
+cleaned_daily_activity$DayOfWeek <- weekdays(cleaned_daily_activity$ActivityDate)
+head(cleaned_daily_activity)
+```
+
+
+Calories:
+```{r}
+daily_calories$ActivityDay <- as.Date(daily_calories$ActivityDay, "%Y-%m-%d")
+daily_calories$DayOfWeek <- weekdays(daily_calories$ActivityDay)
+head(daily_calories)
+```
+
+
+Sleep:
+
+```{r}
+daily_sleep$SleepDay <- as.Date(daily_sleep$SleepDay, "%Y-%m-%d")
+daily_sleep$DayOfWeek <- weekdays(daily_sleep$SleepDay)
+head(daily_sleep)
+```
+
+
+
+
+Now that my data is cleaned, I’m ready to produce some graphs!
+
+
+
+
+**ANALYZE**
+--
+
+I’m going to start by looking at the daily activity data. First, I want to start by running some simple summary statistics to give us a better idea of what to expect.
+
+
+```{r}
+summary(cleaned_daily_activity$TotalSteps)
+```
+
+This shows us that users take an average of 8329 steps a day, which is less than the advised 10,000 steps a day. I find this interesting too because the sample is slightly biased towards people who wear a fitness tracker as we would expect these people to take more steps than those who don't. 
+
+```{r}
+summary(cleaned_daily_activity$Calories)
+```
+
+This shows us that users burn an average of 2,362 calories a day, which is about the expected amount of burned calories for women.
+
+
+Now, I want to compare how many calories users are burning with how many steps they are taking. I expect to see a positive correlation here.
+
+
+```{r}
+ggplot(data = cleaned_daily_activity) +
+  aes(x= TotalSteps, y = Calories) +
+  geom_point(color = 'blue') +
+  geom_smooth() +
+  labs(x = 'Total Steps', y = 'Calories Burned', title = 'Calories Burned vs Total Steps')
+
+```
+
+As expected, this graph shows us a general trend where the more steps a user takes, the more calories they burn. It would be interesting to see some more data of users who take more than 20,000 steps a day to see if the trend continues or it does plateau like the graph predicts based on some outliers.
+
+Similarly, I want to compare the amount of calories users burn with the total distance they go in a day, and I expect it to look quite similar to the previous graph.
+
+
+
+```{r}
+ggplot(data = cleaned_daily_activity) +
+  aes(x= TotalDistance, y = Calories) +
+  geom_point(color = 'blue') +
+  geom_smooth() +
+  labs(x = 'Total Distance', y = 'Calories Burned', title = 'Calories Burned vs Total Distance')
+
+```
+
+As expected, these graphs are nearly identical showing a general trend where the more distance a user goes in a day, the more calories they burn. 
+
+Next I want to see how many calories users burn in comparison to sedentary minutes. Here, I am expecting to see an inverse relationship to the previous two graphs. 
+
+
+```{r}
+ggplot(data = cleaned_daily_activity) +
+  aes(x= SedentaryMinutes, y = Calories) +
+  geom_point(color = 'blue') +
+  geom_smooth() +
+  labs(x = 'Sedentary Minutes', y = 'Calories Burned', title = 'Calories Burned vs Sedentary Minutes')
+
+```
+
+
+
+This result was a bit surprising to me, as I expected to see the opposite of my first two charts, however it appears it starts with a positive correlation until a user hits about 750 minutes of sedentary activity and it starts to plateau a bit and become more negatively correlated. 
+
+After seeing all of this, I think it would be interesting to check and see if there are any trends in the amount of steps users are taking per day based on the day of the week.
+
+
+```{r}
+daily_activity$DayOfWeek <- factor(daily_activity$DayOfWeek, c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday","Friday","Saturday"))
+
+ggplot(data = daily_activity) +
+  aes(x = DayOfWeek, y = TotalSteps) +
+  geom_col(fill =  'blue') +
+  labs(x = 'Day of Week', y = 'Total Steps', title = 'Total steps taken in a week')
+```
+
+This graph shows us that users tend to take the most amount of steps on Sundays and the least amount of steps on Fridays. It also appears as though users tend to take fewer steps as the week progresses. 
+
+I also want to see if there is a relationship between the amount of calories a user burns based on the day of the week.
+
+
+```{r}
+options(scipen = 999) #remove scientific notation
+cleaned_daily_activity$DayOfWeek <- factor(cleaned_daily_activity$DayOfWeek, c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday","Friday","Saturday"))
+
+ggplot(data = cleaned_daily_activity) +
+  aes(x = DayOfWeek, y = Calories) +
+  geom_col(fill =  'blue') 
+  labs(x = 'Day of week', y = 'Calories Burned', title = 'Calories burned in a week')
+```
+
+As expected, this comparison gives us similar results to total steps where users tend to burn the most amount of calories on Sundays and the least amount on Fridays. 
+
+
+Now that I have seen some graphs for users’ daily activity I want to look at users’ sleep activity. I want to first run a few simple summary statistics:
+
+```{r}
+summary(daily_sleep$TotalMinutesAsleep)
+```
+
+This tells us that the average amount of sleep users are getting is 419.5 minutes, which is almost 7 hours, which is an hour less than the suggested amount of sleep people should be getting per night. 
+
+```{r}
+summary(daily_sleep$time_taken_to_sleep)
+```
+
+This tells us it takes an average of 39 minutes for users to fall asleep, ranging from 0 minutes to 371 minutes (a little over 6 hours!)
+
+I think it would be interesting to see if there are any trends in how much sleep users are getting based on the day of the week. 
+
+
+```{r}
+daily_sleep$DayOfWeek <- factor(daily_sleep$DayOfWeek, c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday","Friday","Saturday"))
+
+ggplot(data = daily_sleep) +
+  aes(x = DayOfWeek, y = TotalMinutesAsleep) +
+  geom_col(fill =  'blue') +
+  labs(x = 'Day of week', y = 'Total Minutes Asleep', title = 'Total sleep in a week')
+```
+
+This graph doesn’t show any huge trends, but most notably users tend to sleep the least on Saturdays and the most on Mondays. 
+
+I also thought it would be interesting to search for trends regarding how long it takes a user to fall asleep on a particular day of the week.
+
+
+```{r}
+daily_sleep$DayOfWeek <- factor(daily_sleep$DayOfWeek, c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday","Friday","Saturday"))
+
+ggplot(data = daily_sleep) +
+  aes(x = DayOfWeek, y = time_taken_to_sleep) +
+  geom_col(fill =  'blue') +
+  labs(x = 'Day of week', y = 'Time to fall asleep', title = 'Time taken to fall asleep by days of week')
+```
+
+This graph tells us that on Fridays users tend to take the longest amount of time to fall asleep and on Saturday users take the least amount of time to fall asleep. 
+
+One thing that sparked my curiosity was to see if the amount of time someone spends sleeping is in any way correlated to the amount of time they take to fall asleep.
+
+
+```{r}
+ggplot(data = daily_sleep) +
+  aes(x= TotalMinutesAsleep, y = time_taken_to_sleep) +
+  geom_point(color = 'blue') +
+  geom_smooth() +
+  labs(x = 'Time Asleep', y = 'Time to fall asleep', title = 'Time sleeping vs. fall asleep')
+
+```
+
+
+There does not appear to be a strong relationship here in any way. 
+
+Finally, I wanted to compare the time a user spends asleep with the time they are in bed. Here, I expect to see a strong positive correlation.
+
+
+```{r}
+ggplot(data = daily_sleep) +
+  aes(x= TotalMinutesAsleep, y = TotalTimeInBed) +
+  geom_point(color = 'blue') +
+  geom_smooth() +
+  labs(x = 'Time Asleep', y = 'Time in Bed', title = 'Time sleeping vs. time in bed')
+
+```
+
+
+**SHARE**
+--
+
+
+Based on my analysis, I want to share a summary of some observations I have made.
+
+Daily Activity:
+1. Users burn more calories as they take more steps, indicating a positive correlation between step count and calorie burn.
+
+
+2. A similar positive correlation exists between the distance users travel and the calories burned.
+
+
+3. Surprisingly, the relationship between sedentary minutes and calories burned is positive until around 750 minutes of sedentary activity, after which it starts to plateau and becomes more negatively correlated.
+
+4. Users tend to take the most steps and burn the most calories on Sundays, while Fridays see the fewest steps and calories burned.
+
+5. There is a noticeable decline in activity levels as the week progresses, with fewer steps and lower calorie burn toward the end of the week.
+
+
+
+Sleep Activity:
+
+1. Users' sleep duration varies by the day of the week, with shorter sleep times on Saturdays and longer sleep times on Mondays.
+
+2. Users take the longest time to fall asleep on Fridays and the shortest time on Saturdays.
+
+3. There is no strong relationship between the duration of sleep and the time taken to fall asleep. This suggests that individuals who take longer to fall asleep do not necessarily sleep for shorter durations.
+
+4. There is a strong positive correlation between the time a user spends asleep and the time they spend in bed, indicating that users tend to sleep for most of the time they are in bed.
+
+**ACT**
+--
+
+
+My findings provide valuable insights into user behavior with FitBit trackers. One thing I may suggest to Bellabeat would be to potentially target certain days of the week or activity levels for promoting their wellness products. For example, hosting classes on days of the week where activity is typically higher. Additionally, the analysis highlights the need to consider individual variations in sleep patterns and activity levels when tailoring marketing efforts. Going off of this, it may be wise to create some sort of product that more actively tracks sleep patterns since people are giving their information based off of their best guess. I think something that may be beneficial for Bellabeat would be to partner with other health and wellness brands to promote active living by providing incentives such as deals on products. 
+
