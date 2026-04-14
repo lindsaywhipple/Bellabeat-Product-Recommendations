@@ -1,0 +1,338 @@
+---
+title: "Data-Driven Product Recommendations for Bellabeat"
+author: "Lindsay Whipple"
+date: "July 2023"
+output: 
+  html_document:
+    theme: cosmo
+    toc: true
+    toc_float: true
+    number_sections: true
+    code_folding: hide
+---
+# Data-Driven Product Recommendations for Bellabeat
+
+## **Introduction**
+
+As part of the Google Data Analytics Professional Certificate, I completed a capstone case study designed to demonstrate the full data analysis process. I chose the Bellabeat case study, *How Can a Wellness Technology Company Play It Smart?*, because I was especially interested in the intersection of health, fitness, and consumer behavior. Bellabeat is a wellness technology company that develops health-focused smart products for women. For this project, I analyzed smart device usage data from Fitbit users to identify behavioral patterns in activity and sleep that could help inform Bellabeat's product strategy and marketing approach. Rather than simply describing user trends, this analysis focuses on generating data-driven recommendations that Bellabeat could use to better position its products, improve user engagement, and support healthier daily habits.
+
+## **The Scenario**
+Bellabeat is a high-tech wellness company that develops smart products designed to help women monitor and improve their health. These products track key lifestyle metrics such as physical activity, sleep, and overall wellness through an integrated mobile app. As a junior data analyst on the Bellabeat marketing analytics team, I was tasked with analyzing smart device usage data to better understand how consumers engage with fitness trackers. The goal of this analysis is to uncover behavioral patterns that can help inform Bellabeat's product strategy and marketing decisions. 
+
+
+Some key products included in this dataset include:
+
+-- **Bellabeat App**: an app that connects to the line of smart wellness products which provides users with health data related to activity, sleep, stress, menstrual cycle, and mindfulness habits.
+
+-- **Bellabeat Membership**: a subscription-based membership program that gives users 24/7 access to personalized guidance on health and wellness habits
+-- **Leaf**: a wellness tracker that can be worn and connects to the Bellabeat app (similar to a FitBit)
+
+-- **Time**: a wellness watch that allows users to track activity, sleep, and stress and connects to the Bellabeat app
+
+-- **Spring**: a water bottle that tracks daily water intake and connects to the app
+
+
+## **Ask**
+
+### Business Task
+
+The objective of this analysis is to examine smart device usage data to identify behavioral patterns in user activity and sleep. These insights will be used to develop data-driven recommendations that can inform Bellabeat's product strategy and marketing approach.
+
+### Key Business Question
+
+How can Bellabeat use smart device usage patterns to improve user engagement and inform product and marketing decisions?
+
+### Supporting Questions
+
+1. What trends exist in users' daily activity levels (steps, calories, sedentary behavior)?
+
+2. How do user engagement patterns vary throughout the week?
+
+3. What insights can be drawn from users' sleep behavior?
+
+### Key Stakeholders
+
+- Bellabeat Co-Founders: Urska Srsen and Sando Mur
+
+- Bellabeat Marketing Analytics Team
+
+## **Prepare**
+
+The dataset used in this analysis contains smart device usage data collected from Fitbit users. This dataset was provided as part of the Google Data Analytics Professional Certificate capstone project and is commonly used to explore patterns in health and wellness behavior. 
+
+The data includes daily metrics such as:
+- Step Count
+- Calories Burned
+- Activity Intensity Levels (ex. sedentary, lightly active, very active)
+- Sleep Duration and Time in Bed
+
+These datasets provide insight into how users engage with wearable fitness devices across both physical activity and sleep behaviors. 
+
+### Data Limitations
+
+It is important to note that this dataset represents Fitbit users rather than Bellabeat customers directly. As a result, the findings may not fully reflect Bellabeat's specific user base. Additionally, the dataset covers a limited time period and may not capture long-term behavioral trends.
+
+
+### Load and Clean Data
+
+To prepare the data for analysis, I cleaned and standardized the Fitbit dataset in R. The goal of this step was to ensure that the data was formatted consistently, remove records that were unlikely to reflect actual device usage, and create new variables that would support more meaningful analysis of user behavior. 
+
+```{r, message=FALSE, warning=FALSE}
+# Load Packages 
+library(tidyverse)
+library(lubridate)
+library(janitor)
+library(skimr)
+library(ggplot2)
+```
+
+
+```{r}
+# Uploading and Storing Data
+daily_activity <- read.csv("Bellabeat Fitbit Data/dailyActivity_merged.csv")
+daily_calories <- read.csv("Bellabeat Fitbit Data/dailyCalories_merged.csv")
+daily_steps <- read.csv("Bellabeat Fitbit Data/dailySteps_merged.csv")
+daily_sleep <- read.csv("Bellabeat Fitbit Data/sleepDay_merged.csv")
+```
+
+
+I began by loading the daily activity, calories, steps, and sleep datasets that would be used throughout the analysis. 
+
+```{r}
+# Inspect Data
+glimpse(daily_activity)
+glimpse(daily_calories)
+glimpse(daily_steps)
+glimpse(daily_sleep)
+```
+
+## **Process** 
+
+```{r}
+# Search for Missing Values
+colSums(is.na(daily_activity))
+colSums(is.na(daily_calories))
+colSums(is.na(daily_steps))
+colSums(is.na(daily_sleep))
+```
+
+I reviewed the structure of each dataset to confirm the available variables and check for formatting issues. I also checked for missing values to identify any obvious data quality concerns before cleaning.
+
+```{r}
+# Clean column names first
+daily_activity <- daily_activity %>% clean_names()
+daily_calories <- daily_calories %>% clean_names()
+daily_steps <- daily_steps %>% clean_names()
+daily_sleep <- daily_sleep %>% clean_names()
+
+# Check column names
+names(daily_activity)
+names(daily_calories)
+names(daily_steps)
+names(daily_sleep)
+
+# Convert to proper date formats
+daily_activity$activity_date <- as.Date(as.character(daily_activity$activity_date), format = "%m/%d/%Y")
+daily_calories$activity_day <- as.Date(as.character(daily_calories$activity_day), format = "%m/%d/%Y")
+daily_steps$activity_day <- as.Date(as.character(daily_steps$activity_day), format = "%m/%d/%Y")
+
+daily_sleep$sleep_day <- as.POSIXct(
+  as.character(daily_sleep$sleep_day),
+  format = "%m/%d/%Y %I:%M:%S %p"
+)
+
+daily_sleep$date <- as.Date(daily_sleep$sleep_day)
+
+# Quick check
+head(daily_activity$activity_date)
+head(daily_calories$activity_day)
+head(daily_steps$activity_day)
+head(daily_sleep$date)
+```
+
+A key part of the cleaning process was converting date fields into proper date format. In the raw files, date values were stored as character strings, which would make time-based analysis more difficult. Standardizing these fields made it possible to analyze activity and sleep trends by day.
+
+```{r}
+# Create Derived Variables
+daily_activity$day_of_week <- weekdays(daily_activity$activity_date)
+daily_calories$day_of_week <- weekdays(daily_calories$activity_day)
+daily_steps$day_of_week <- weekdays(daily_steps$activity_day)
+daily_sleep$day_of_week <- weekdays(daily_sleep$date)
+
+daily_sleep$time_taken_to_sleep <- daily_sleep$total_time_in_bed - daily_sleep$total_minutes_asleep
+```
+
+Next, I created new variables that would help support the analysis. A 'day_of_week' field was added to each dataset so that usage patterns could be compared across the week. I also created a 'time_taken_to_sleep' variable by subtracting total minutes asleep from total time in bed, which provided a siple estimate of how long it took users to fall asleep.
+
+```{r}
+# Remove Unusable Records
+cleaned_daily_activity <- daily_activity %>%
+  filter(calories > 0, total_distance > 0)
+nrow(daily_activity)
+nrow(cleaned_daily_activity)
+```
+
+I removed activity records where calories burned or total distance were recorded as zero. These records likely represent days when the device was not worn or was not used consistently, and including them could distort the analysis of actual user behavior. 
+
+```{r}
+# Check for Duplicates
+sum(duplicated(daily_activity))
+sum(duplicated(daily_calories))
+sum(duplicated(daily_steps))
+sum(duplicated(daily_sleep))
+```
+
+```{r}
+# Remove Duplicates
+daily_sleep <- distinct(daily_sleep)
+```
+
+Finally, I identified duplicate records across multiple datasets, indicating that some daily observations had been recorded more than once. Because duplicate rows can artificially inflate summary statistics and distort trends, I removed all duplicate entries before proceeding with the analysis. A follow-up check confirmed that no duplicate records remained, ensuring that each row represents a unique observation and improving the overall reliability of the results.
+
+```{r}
+# Preview Cleaned Data
+glimpse(cleaned_daily_activity)
+glimpse(daily_sleep)
+```
+
+After cleaning, the datasets were ready for analysis. At this stage, the data has standardized date fields, added weekday variables, a derived sleep measure, and a cleaned activity table that better reflected actual user behavior.
+
+## **Analyze**
+
+### Activity Overview
+
+To begin the analysis, I examined overall daily activity levels to better understand how users engage with their fitness devices. Looking at summary statistics first provides a general picture of step count, calorie burn, and sedentary beheavior across the dataset. 
+
+```{r}
+cleaned_daily_activity %>%
+  summarise(
+    average_steps = round(mean(total_steps, na.rm = TRUE), 0),
+    median_steps = round(median(total_steps, na.rm = TRUE), 0),
+    average_calories = round(mean(calories, na.rm = TRUE), 0),
+    average_sedentary_minutes = round(mean(sedentary_minutes, na.rm = TRUE), 0)
+  )
+```
+
+Users averaged roughly 8,000 to 8,500 steps per day, which falls below the commonly referenced 10,000 step benchmark. This suggests that even among smart device users, many individuals are not consistently reaching higher daily activity levels. At the same time, the data show a substantial amount of sedentary time, indicating that inactivity remains an important part of overall user behavior. Together, these findings suggest that Bellabeat has an opportunity to position its products not only as activity trackers, but as tools that encourage healthier daily routines and more consistent movement.
+
+### Relationship Between Steps and Calories
+
+To better understand how physical activity translates into measurable outcomes, I examined the relationship between total daily steps and calories burned. 
+
+```{r}
+ggplot(cleaned_daily_activity, aes(x = total_steps, y = calories)) +
+  geom_point(alpha = 0.5, color = "blue") +
+  geom_smooth(method = "lm", color = "red", se = FALSE) +
+  labs(
+    title = "Relationship Between Daily Steps and Calories Burned",
+    x = "Total Steps",
+    y = "Calories Burned"
+  ) +
+  theme_minimal()
+```
+
+The plot shows a clear positive relationship between daily step count and calories burned, confirming that higher levels of physical activity are associated with greater energy expenditure. This reinforces the value of step count as a simple and effective metric for tracking overall activity. At the same time, the variation in calorie burn for similar step counts suggests differences in activity intensity, indicating that not all movement contributes equally to overall health outcomes. For Bellabeat, this presents an opportunity to emphasize step tracking as a core feature while also incorporating goal-setting, progress tracking, and activity-based incentives. Encouraging users to increase both their daily steps and activity intenstiy could help drive more meaningful improvements in overall wellbeing. 
+
+### Weekly Activity Patterns
+
+To better understand how user engagement varies over time, I analyzed activity levels across different days of the week. Identifying these patterns can help reveal when users are most and least active. 
+
+```{r}
+weekday_activity <- cleaned_daily_activity %>%
+  group_by(day_of_week) %>%
+  summarise(
+    avg_steps = mean(total_steps, na.rm = TRUE),
+    avg_calories = mean(calories, na.rm = TRUE)
+  )
+
+# Order days properly
+weekday_activity$day_of_week <- factor(
+  weekday_activity$day_of_week,
+  levels = c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")
+)
+
+ggplot(weekday_activity, aes(x = day_of_week, y = avg_steps)) +
+  geom_col(fill = "blue") +
+  labs(
+    title = "Average Daily Steps by Day of Week",
+    x = "Day of Week",
+    y = "Average Steps"
+  ) +
+  theme_minimal()+
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+```
+
+The data show clear variation in activity levels across the week. Users tend to be the most active on Tuesdays and Saturdays, while activity levels are lowest on Fridays and Sundays. Interestingly, activity does not steadily increase toward the weekend, suggesting that user behavior is influenced by both weekday routines and weekend habits rather than a simple workweek vs. weekend pattern. For Bellabeat, this presents an opportunity to target lower-activity days, particularly Fridays and Sundays, with reminders, motivational prompts, or personalized activity goals. By encouraging engagement during these lower periods, Bellabeat could help users build more consistent activity habits across the entire week. Additionally, the relatively higher activity on certain days suggests that Bellabeat could reinforce positive behavior through milestone tracking or rewards on high-engagement days, helping users stay motivated and maintain momentum.
+
+### Sleep Behavior Insights
+
+In addition to physical activity, sleep is a key component of overall wellness. I analyzed users' sleep data to better understand patterns in sleep duration, efficiency, and behavior. 
+
+```{r}
+# Sleep Summary
+daily_sleep %>%
+  summarise(
+    avg_minutes_asleep = mean(total_minutes_asleep, na.rm = TRUE),
+    avg_time_in_bed = mean(total_time_in_bed, na.rm = TRUE),
+    avg_time_to_sleep = mean(time_taken_to_sleep, na.rm = TRUE)
+  )
+```
+
+Users averaged approximately 419 minutes of sleep per night (about 7 hours), which is slightly below the commonly recommended 8 hours for adults. This suggests that even among smart device users, many individuals may not be consistently achieving optimal sleep duration. On average, users spent about 458 minutes in bed, indicating a gap of roughly 39 minutes between time in bed and time asleep. This difference highlights variability in sleep efficiency, suggesting that users may spend a significant amount of time attempting to fall asleep rather than actually resting. For Bellabeat, this presents an opportunity to emphasize not only sleep duration, but also sleep quality. By providing insights into sleep efficiency and offering recommendations to improve bedtime routines, Bellabeat can help users develop healthier and more effective sleep habits. 
+
+```{r}
+ggplot(daily_sleep, aes(x = time_taken_to_sleep)) +
+  geom_histogram(fill = "blue", bins = 30) +
+  labs(
+    title = "Distribution of Time Taken to Fall Asleep",
+    x = "Minutes to Fall Asleep",
+    y = "Count"
+  ) +
+  theme_minimal()
+```
+
+The distribution of time taken to fall asleep shows that most users fall asleep within approximately 10 to 40 minutes. However, there is a long tail of users who take signficantly longer, with some taking over 100 minutes to fall asleep. This variation suggests that while many users experience relatively efficent sleep onset, a subset of users may struggle with falling asleep, indicating potential issues with sleep quality or nighttime routines. The presence of extreme outliers may also reflect inconsistent device usage or unusual sleep patterns. For Bellabeat, this presents an opportunity to provide more personalized insights and recommendations related to sleep behavior. Featuers such as bedtime reminders, relaxation guidance, or sleep habit tracking could help users improve both sleep efficency and overall sleep quality. By addressing not only how long users sleep, but how easily they fall asleep, Bellabeat can offer a more comprehensive and differentiated approach to wellness tracking. 
+
+## **Share**
+
+### Key Insights
+- Users average approximately 8,000-8,500 steps per day, indicating that many individuals are not consistently reaching recommended activity levels.
+- There is a strong positive relationship between daily steps and calories burned, reinforcing step count as a reliable indicator of overall physical activity. 
+- Activity levels vary across the week, with higher engagement on certain days (ex. Tuesday and Saturday) and lower activity on others (ex. Friday and Sunday), suggesting opportunities for targeted engagement.
+- Users average about 7 hours of sleep per night, slightly below recommended levels, indicating potential gaps in sleep duration. 
+- On average, users spend about 39 minutes in bed before falling asleep, highlighting variability in sleep efficency. 
+- The distribution of time taken to fall asleep shows that while many users fall asleep within 10-40 minutes, a subset takes signficantly longer, suggesting differences in sleep quality and potential opportunities for personalized guidance. 
+
+## **Act**
+
+### Recommendations
+
+Based on the analysis of user activity and sleep behavior, several opportunities emerge for Bellabeat to improve user engagement and product positioning. 
+
+#### Promote Step-Based Engagement Features
+
+Since step count is strongly associated with calories burned and overall activity, Bellabeat should emphasize step tracking as a core feature. Personalized step goals, progress tracking, and milestone-based rewards can help motivate users to increase their daily activity levels. 
+
+#### Target Low-Activity Days with Engagement Strategies
+
+User activity varies across the week, with noticeable drops on certain days such as Fridays and Sundays, Bellabeat can leverage this insight by implementing targeted notifications, reminders, or challenges on lower-activity days to encourage more consistent engagement. 
+
+#### Encourage Habit Formation Through Consistency Tracking
+
+Because activity levels fluctuate throughout the week, Bellabeat should focus on helping users build consistent routines. Features such as weekly activity summaries, streak tracking, or habit-based goals could reinforce long-term behavior change.
+
+#### Expand Sleep-Focused Features and Insights
+
+Users average slightly below recommended sleep levels and show variability in sleep efficiency. Bellabeat can enhance its value proposition by providing more detailed sleep insights, including sleep duration trends, time-to-fall-asleep tracking, and personalized recommendations for improving sleep quality.
+
+#### Deliver Personalized Wellness Recommendations
+
+The variation in both activity and sleep behavior suggests that users have different needs and habits. Bellabeat could differentiate itself by offering personalized insights and recommendations tailored to individual user patterns, helping users make more meaningful improvements in their overall wellness.
+
+## **Conclusion**
+
+This analysis explored smart device usage data to better understand patterns in user activity and sleep behavior, with the goal of informing Bellabeat’s product and marketing strategy. By examining trends in daily steps, calorie expenditure, weekly activity patterns, and sleep habits, several key insights emerged about how users engage with wellness technology. The findings suggest that while users are actively engaging with fitness trackers, many are not consistently reaching optimal activity or sleep levels. Step count proved to be a strong and accessible indicator of overall activity, while variations in weekly behavior highlighted opportunities for more targeted engagement strategies. Additionally, sleep analysis revealed not only slightly below-recommended sleep duration, but also meaningful differences in sleep efficiency, suggesting that users may benefit from more comprehensive support around nighttime routines. These insights reinforce the idea that wearable devices can play a critical role in helping users build healthier habits—but only when paired with actionable feedback and personalized guidance. For Bellabeat, this presents an opportunity to move beyond passive tracking and position its products as tools that actively support behavior change. By focusing on step-based engagement, habit formation, and personalized wellness insights, Bellabeat can enhance user experience, improve long-term engagement, and better differentiate itself in the competitive wellness technology market. Ultimately, leveraging data-driven insights in this way allows Bellabeat to deliver more value to its users while supporting healthier, more sustainable lifestyles.
+
