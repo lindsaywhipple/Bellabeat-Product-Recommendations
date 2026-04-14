@@ -1,4 +1,4 @@
-# Customer Segmentation and Behavior Analysis
+# Data-Driven Product Recommendations for Bellabeat
 
 ## Live Project
 [View Project Here (RPubs)](https://rpubs.com/LindsayWhipple/1079783)
