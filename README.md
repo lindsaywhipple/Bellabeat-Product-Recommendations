@@ -1,7 +1,7 @@
 # Data-Driven Product Recommendations for Bellabeat
 
 ## Live Project
-[View Project Here (RPubs)](https://rpubs.com/LindsayWhipple/1079783)
+[View Project Here (RPubs)](https://rpubs.com/LindsayWhipple/BellabeatProductRecommendations)
 
 ## Overview
 This project was completed as part of the Coursera Google Data Analytics Professional Certificatation program and focuses on analyzing customer data to identify patterns and segment users based on their interactions. The project serves as a foundational application of exploratory data analysis and segmentation techniques in a structured learning environment. 
